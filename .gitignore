@@ -1,0 +1,9 @@
+vendor/
+node_modules/
+.env
+.DS_Store
+*.log
+*.sqlite
+*.sqlite3
+*.tmp
+*.cache
