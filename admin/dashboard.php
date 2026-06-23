@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once '../config.php';
+// require_once '../config.php';
 
 // Check auth
 if (!isset($_SESSION['admin_logged_in'])) {
@@ -10,84 +10,31 @@ if (!isset($_SESSION['admin_logged_in'])) {
 
 $message = '';
 
-// Handle Add FAQ
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add') {
-    $question = trim($_POST['question']);
-    $answer = trim($_POST['answer']);
-    
-    if (!empty($question) && !empty($answer)) {
-        $stmt = $conn->prepare("INSERT INTO faq (question, answer) VALUES (?, ?)");
-        $stmt->bind_param("ss", $question, $answer);
-        if ($stmt->execute()) {
-            $message = "<div class='alert alert-success alert-dismissible fade show shadow-sm text-sm border-0 mt-3'><i class='fas fa-check-circle me-2'></i> FAQ added successfully.<button type='button' class='btn-close' data-bs-dismiss='alert'></button></div>";
-        } else {
-            $message = "<div class='alert alert-danger mt-3'><i class='fas fa-exclamation-triangle me-2'></i> Error adding FAQ.</div>";
-        }
-    }
+// Handle Actions
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    $message = "<div class='alert alert-info mt-3'><i class='fas fa-info-circle me-2'></i> Database is disabled for now. Changes are not saved.</div>";
 }
 
-// Handle Edit FAQ
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'edit') {
-    $id = $_POST['id'];
-    $question = trim($_POST['question']);
-    $answer = trim($_POST['answer']);
-    
-    if (!empty($id) && !empty($question) && !empty($answer)) {
-        $stmt = $conn->prepare("UPDATE faq SET question = ?, answer = ? WHERE id = ?");
-        $stmt->bind_param("ssi", $question, $answer, $id);
-        if ($stmt->execute()) {
-            $message = "<div class='alert alert-success alert-dismissible fade show shadow-sm text-sm border-0 mt-3'><i class='fas fa-check-circle me-2'></i> FAQ updated successfully.<button type='button' class='btn-close' data-bs-dismiss='alert'></button></div>";
-        } else {
-            $message = "<div class='alert alert-danger mt-3'>Error updating FAQ.</div>";
-        }
-    }
+if (isset($_GET['delete']) || isset($_GET['del_un'])) {
+    $message = "<div class='alert alert-info mt-3'><i class='fas fa-info-circle me-2'></i> Database is disabled for now. Deletion ignored.</div>";
 }
 
-// Handle Delete FAQ
-if (isset($_GET['delete'])) {
-    $id = $_GET['delete'];
-    $stmt = $conn->prepare("DELETE FROM faq WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    if ($stmt->execute()) {
-        $message = "<div class='alert alert-success alert-dismissible fade show shadow-sm text-sm border-0 mt-3'><i class='fas fa-check-circle me-2'></i> FAQ deleted successfully.<button type='button' class='btn-close' data-bs-dismiss='alert'></button></div>";
-    }
-}
+// Mock Data
+$mock_faqs = [
+    ['id' => 1, 'question' => 'hello', 'answer' => 'Hi there! 👋 How can I help you today?'],
+    ['id' => 2, 'question' => 'fees', 'answer' => 'Please contact the accounts office via accounts@eagles.edu']
+];
+$total_faqs = count($mock_faqs);
 
-// Fetch all FAQs
-$faqs_result = $conn->query("SELECT * FROM faq ORDER BY id DESC");
-$total_faqs = $faqs_result->num_rows;
+$unanswered = [
+    ['id' => 1, 'question' => 'What is the exact price of form 1 fees?', 'asked_count' => 3, 'created_at' => date('Y-m-d H:i:s')]
+];
+$leads = [
+    ['id' => 1, 'name' => 'John Doe', 'email' => 'john@example.com', 'created_at' => date('Y-m-d H:i:s')]
+];
+$total_messages = 42;
+$has_premium = true;
 
-// Premium Features Data Fetch
-$unanswered = [];
-$leads = [];
-$total_messages = 0;
-
-$check = $conn->query("SHOW TABLES LIKE 'unanswered_queries'");
-$has_premium = ($check && $check->num_rows > 0);
-
-if ($has_premium) {
-    // Delete Unanswered
-    if (isset($_GET['del_un'])) {
-        $id = $_GET['del_un'];
-        $stmt = $conn->prepare("DELETE FROM unanswered_queries WHERE id = ?");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-        header("Location: dashboard.php");
-        exit;
-    }
-    
-    $u_res = $conn->query("SELECT * FROM unanswered_queries ORDER BY asked_count DESC");
-    if($u_res) while($r = $u_res->fetch_assoc()) $unanswered[] = $r;
-    
-    $l_res = $conn->query("SELECT * FROM leads ORDER BY id DESC");
-    if($l_res) while($r = $l_res->fetch_assoc()) $leads[] = $r;
-    
-    $m_res = $conn->query("SELECT COUNT(*) as c FROM chat_logs");
-    if ($m_res) {
-        $m_row = $m_res->fetch_assoc();
-        $total_messages = $m_row['c'];
-    }
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -223,7 +170,7 @@ if ($has_premium) {
                                         </thead>
                                         <tbody>
                                             <?php if ($total_faqs > 0): ?>
-                                                <?php while($row = $faqs_result->fetch_assoc()): ?>
+                                                <?php foreach($mock_faqs as $row): ?>
                                                     <tr>
                                                         <td class="px-4 fw-bold text-muted"> <span class="bg-light px-2 py-1 rounded border">#<?php echo $row['id']; ?></span> </td>
                                                         <td class="text-dark fw-medium lh-sm" style="font-size: 0.95rem;">
@@ -278,8 +225,9 @@ if ($has_premium) {
                                                             </div>
                                                         </div>
                                                     </div>
-                                                <?php endwhile; ?>
+                                                <?php endforeach; ?>
                                             <?php else: ?>
+
                                                 <tr>
                                                     <td colspan="4" class="text-center py-5">
                                                         <h5 class="fw-bold text-dark mt-3">No Data Found</h5>
